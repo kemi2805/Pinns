@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, TensorDataset, random_split
 # Physics modules (assuming these are available)
 from metric import metric
 from hybrid_eos import hybrid_eos
+from C2P_Solver import *
 
 class ResidualBlock(nn.Module):
     """Residual block with skip connection"""
@@ -128,7 +129,7 @@ class FourierPINN(nn.Module):
             nn.Linear(256, 128, dtype=dtype),
             nn.SiLU(),
             nn.Linear(128, 1, dtype=dtype),
-            nn.Softplus()
+            nn.Sigmoid()
         )
         
         # Initialize weights
@@ -214,7 +215,7 @@ class MultiScalePINN(nn.Module):
             nn.Linear(128 + 3, 64, dtype=dtype),  # +3 for input skip
             nn.SiLU(),
             nn.Linear(64, 1, dtype=dtype),
-            nn.Softplus()
+            nn.Sigmoid()
         )
         
         self.apply(self._init_weights)
@@ -308,7 +309,7 @@ class DeepResidualPINN(nn.Module):
             nn.Linear(width + 3, width // 2, dtype=dtype),  # Global skip
             nn.SiLU(),
             nn.Linear(width // 2, 1, dtype=dtype),
-            nn.Softplus()
+            nn.Sigmoid()
         )
         
         self.apply(self._init_weights)
