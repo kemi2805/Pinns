@@ -296,3 +296,246 @@ def plot_zeta_scatter_analysis(Z_true, Z_pred, save_fig=False, fig_path=None):
         print(f"Zeta scatter analysis saved to {fig_path}")
     
     plt.show()
+
+
+def plot_error_analysis_with_zeta_absolute(solver, test_C, test_Z, N=50, save_fig=False, fig_path=None):
+    """
+    Plot comprehensive absolute error analysis for C2P solver including zeta components
+    
+    Args:
+        solver: C2P solver instance
+        test_C: Test conservative variables
+        test_Z: Test primitive variables (Z/zeta)
+        N: Number of bins for histograms
+        save_fig: Whether to save the figure
+        fig_path: Path to save figure (if save_fig=True)
+    """
+    # Predict on test data
+    rho_pred, eps_pred, press_pred, W_pred = solver.invert(test_C)
+    
+    # Compute true values
+    Z_true = test_Z.view(-1, 1)
+    print(f"Z_true shape: {Z_true.shape}")
+    print(f"Z_true sample: {Z_true[:5].flatten()}")
+    
+    rho_true = rho__z(Z_true, test_C)
+    W_true = W__z(Z_true)
+    eps_true = eps__z(Z_true, test_C)
+    press_true = solver.eos.press__eps_rho(eps_true, rho_true)
+    
+    # Get predicted zeta from the model
+    with torch.no_grad():
+        # Normalize input conservative variables
+        C_norm = (test_C - solver.C_min) / (solver.C_max - solver.C_min)
+        Z_pred_norm = solver.model(C_norm)
+        # Denormalize predicted zeta
+        Z_pred = Z_pred_norm * (solver.Z_max - solver.Z_min) + solver.Z_min
+    
+    print(f"Z_pred shape: {Z_pred.shape}")
+    print(f"Z_pred sample: {Z_pred[:5].flatten()}")
+    
+    # Calculate ABSOLUTE errors for physical variables
+    rho_error = torch.abs(rho_pred - rho_true)
+    eps_error = torch.abs(eps_pred - eps_true)
+    press_error = torch.abs(press_pred - press_true)
+    W_error = torch.abs(W_pred - W_true)
+    
+    # Calculate absolute zeta error
+    Z_error = torch.abs(Z_pred - Z_true)
+    
+    # Convert to numpy for plotting
+    errors = {
+        'Density (ρ)': rho_error.detach().cpu().numpy().flatten(),
+        'Specific Energy (ε)': eps_error.detach().cpu().numpy().flatten(),
+        'Pressure (P)': press_error.detach().cpu().numpy().flatten(),
+        'Lorentz Factor (W)': W_error.detach().cpu().numpy().flatten(),
+        'Zeta (ζ)': Z_error.detach().cpu().numpy().flatten()
+    }
+    
+    # Also store true values for context
+    true_values = {
+        'Density (ρ)': rho_true.detach().cpu().numpy().flatten(),
+        'Specific Energy (ε)': eps_true.detach().cpu().numpy().flatten(),
+        'Pressure (P)': press_true.detach().cpu().numpy().flatten(),
+        'Lorentz Factor (W)': W_true.detach().cpu().numpy().flatten(),
+        'Zeta (ζ)': Z_true.detach().cpu().numpy().flatten()
+    }
+    
+    # Determine subplot layout based on number of variables
+    n_vars = len(errors)
+    if n_vars <= 4:
+        nrows, ncols = 2, 2
+    elif n_vars <= 6:
+        nrows, ncols = 2, 3
+    else:
+        nrows, ncols = 3, 3
+    
+    # Create error distribution plots
+    fig, axes = plt.subplots(nrows, ncols, figsize=(6*ncols, 5*nrows))
+    if n_vars == 1:
+        axes = [axes]
+    else:
+        axes = axes.flatten()
+    
+    colors = ['skyblue', 'lightcoral', 'lightgreen', 'plum', 'gold', 'lightpink']
+    
+    for i, (name, error) in enumerate(errors.items()):
+        # Remove any infinite or NaN values
+        error_clean = error[np.isfinite(error)]
+        
+        # For absolute errors, use log scale when errors span multiple orders of magnitude
+        min_error = np.min(error_clean[error_clean > 0]) if np.any(error_clean > 0) else 1e-15
+        max_error = np.max(error_clean)
+        
+        # Use log scale if errors span more than 2 orders of magnitude
+        use_log = (max_error / min_error) > 100 if min_error > 0 else False
+        
+        if use_log:
+            log_error = np.log10(np.maximum(error_clean, 1e-15))
+            hist_data = log_error
+            xlabel = 'log₁₀(Absolute Error)'
+        else:
+            hist_data = error_clean
+            xlabel = 'Absolute Error'
+        
+        # Create histogram
+        n, bins, patches = axes[i].hist(hist_data, bins=N, alpha=0.7, 
+                                       color=colors[i % len(colors)], 
+                                       edgecolor='black', linewidth=0.5)
+        
+        axes[i].set_xlabel(xlabel, fontsize=12)
+        axes[i].set_ylabel('Frequency', fontsize=12)
+        axes[i].set_title(f'{name} Absolute Error Distribution', fontsize=14, fontweight='bold')
+        axes[i].grid(True, alpha=0.3)
+        
+        # Add statistics
+        mean_error = np.mean(error_clean)
+        max_error_val = np.max(error_clean)
+        median_error = np.median(error_clean)
+        p95_error = np.percentile(error_clean, 95)
+        
+        # Add vertical lines for statistics
+        if use_log:
+            axes[i].axvline(np.log10(mean_error), color='red', linestyle='--', linewidth=2,
+                           label=f'Mean: {mean_error:.2e}')
+            axes[i].axvline(np.log10(median_error), color='orange', linestyle='--', linewidth=2,
+                           label=f'Median: {median_error:.2e}')
+            axes[i].axvline(np.log10(p95_error), color='purple', linestyle='--', linewidth=2,
+                           label=f'95th percentile: {p95_error:.2e}')
+        else:
+            axes[i].axvline(mean_error, color='red', linestyle='--', linewidth=2,
+                           label=f'Mean: {mean_error:.2e}')
+            axes[i].axvline(median_error, color='orange', linestyle='--', linewidth=2,
+                           label=f'Median: {median_error:.2e}')
+            axes[i].axvline(p95_error, color='purple', linestyle='--', linewidth=2,
+                           label=f'95th percentile: {p95_error:.2e}')
+        
+        axes[i].legend(fontsize=9)
+        
+        # Add text box with additional stats including typical scale
+        true_vals = true_values[name]
+        typical_scale = np.mean(np.abs(true_vals))
+        relative_error_typical = mean_error / typical_scale if typical_scale > 0 else np.inf
+        
+        stats_text = (f'Max: {max_error_val:.2e}\n'
+                     f'Std: {np.std(error_clean):.2e}\n'
+                     f'Typical scale: {typical_scale:.2e}\n'
+                     f'Relative to scale: {relative_error_typical:.2e}\n'
+                     f'Samples: {len(error_clean)}')
+        axes[i].text(0.02, 0.98, stats_text, transform=axes[i].transAxes, 
+                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    
+    # Hide unused subplots
+    for i in range(len(errors), len(axes)):
+        axes[i].set_visible(False)
+    
+    plt.tight_layout()
+    
+    if save_fig:
+        if fig_path is None:
+            fig_path = 'absolute_error_analysis_with_zeta.png'
+        plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+        print(f"Figure saved to {fig_path}")
+    
+    plt.show()
+    
+    # Print comprehensive summary statistics
+    print("\n" + "="*70)
+    print("COMPREHENSIVE ABSOLUTE ERROR ANALYSIS SUMMARY (INCLUDING ZETA)")
+    print("="*70)
+    
+    for name, error in errors.items():
+        error_clean = error[np.isfinite(error)]
+        true_vals = true_values[name]
+        typical_scale = np.mean(np.abs(true_vals))
+        
+        print(f"\n{name:20s}:")
+        print(f"  Mean abs error:     {np.mean(error_clean):.2e}")
+        print(f"  Median abs error:   {np.median(error_clean):.2e}")
+        print(f"  Std abs error:      {np.std(error_clean):.2e}")
+        print(f"  Min abs error:      {np.min(error_clean):.2e}")
+        print(f"  Max abs error:      {np.max(error_clean):.2e}")
+        print(f"  95th percentile:    {np.percentile(error_clean, 95):.2e}")
+        print(f"  99th percentile:    {np.percentile(error_clean, 99):.2e}")
+        print(f"  Typical value scale: {typical_scale:.2e}")
+        print(f"  Mean relative error: {np.mean(error_clean)/typical_scale:.2e}")
+        print(f"  Samples:            {len(error_clean)}")
+        
+        # Error quality assessment based on absolute thresholds
+        # These thresholds should be adjusted based on your specific physics problem
+        if 'Density' in name:
+            excellent = np.sum(error_clean < 1e-12)
+            good = np.sum((error_clean >= 1e-12) & (error_clean < 1e-8))
+            fair = np.sum((error_clean >= 1e-8) & (error_clean < 1e-6))
+            poor = np.sum(error_clean >= 1e-6)
+        elif 'Energy' in name:
+            excellent = np.sum(error_clean < 1e-10)
+            good = np.sum((error_clean >= 1e-10) & (error_clean < 1e-6))
+            fair = np.sum((error_clean >= 1e-6) & (error_clean < 1e-4))
+            poor = np.sum(error_clean >= 1e-4)
+        elif 'Pressure' in name:
+            excellent = np.sum(error_clean < 1e-10)
+            good = np.sum((error_clean >= 1e-10) & (error_clean < 1e-6))
+            fair = np.sum((error_clean >= 1e-6) & (error_clean < 1e-4))
+            poor = np.sum(error_clean >= 1e-4)
+        elif 'Lorentz' in name:
+            excellent = np.sum(error_clean < 1e-12)
+            good = np.sum((error_clean >= 1e-12) & (error_clean < 1e-8))
+            fair = np.sum((error_clean >= 1e-8) & (error_clean < 1e-6))
+            poor = np.sum(error_clean >= 1e-6)
+        else:  # Zeta
+            excellent = np.sum(error_clean < 1e-10)
+            good = np.sum((error_clean >= 1e-10) & (error_clean < 1e-6))
+            fair = np.sum((error_clean >= 1e-6) & (error_clean < 1e-4))
+            poor = np.sum(error_clean >= 1e-4)
+        
+        print(f"  Quality breakdown (absolute thresholds):")
+        print(f"    Excellent: {excellent:6d} ({100*excellent/len(error_clean):5.1f}%)")
+        print(f"    Good:      {good:6d} ({100*good/len(error_clean):5.1f}%)")
+        print(f"    Fair:      {fair:6d} ({100*fair/len(error_clean):5.1f}%)")
+        print(f"    Poor:      {poor:6d} ({100*poor/len(error_clean):5.1f}%)")
+    
+    print("\n" + "="*70)
+    
+    # Additional zeta-specific analysis
+    print("\nZETA-SPECIFIC ANALYSIS:")
+    print("-" * 30)
+    Z_true_np = Z_true.detach().cpu().numpy().flatten()
+    Z_pred_np = Z_pred.detach().cpu().numpy().flatten()
+    Z_error_np = Z_error.detach().cpu().numpy().flatten()
+    
+    print(f"Zeta range (true):      [{np.min(Z_true_np):.4f}, {np.max(Z_true_np):.4f}]")
+    print(f"Zeta range (predicted): [{np.min(Z_pred_np):.4f}, {np.max(Z_pred_np):.4f}]")
+    print(f"Zeta correlation:       {np.corrcoef(Z_true_np, Z_pred_np)[0,1]:.6f}")
+    print(f"Mean absolute zeta error: {np.mean(Z_error_np):.2e}")
+    print(f"RMS zeta error:         {np.sqrt(np.mean(Z_error_np**2)):.2e}")
+    
+    # Find worst predictions
+    worst_indices = np.argsort(Z_error_np)[-5:]
+    print(f"\nWorst 5 zeta predictions (absolute error):")
+    for idx in worst_indices:
+        rel_error = Z_error_np[idx] / abs(Z_true_np[idx]) if Z_true_np[idx] != 0 else np.inf
+        print(f"  Sample {idx}: True={Z_true_np[idx]:.6f}, Pred={Z_pred_np[idx]:.6f}, "
+              f"Abs Error={Z_error_np[idx]:.2e}, Rel Error={rel_error:.2e}")
+    
+    return errors, Z_pred, Z_true

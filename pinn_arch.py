@@ -129,7 +129,6 @@ class FourierPINN(nn.Module):
             nn.Linear(256, 128, dtype=dtype),
             nn.SiLU(),
             nn.Linear(128, 1, dtype=dtype),
-            nn.Sigmoid()
         )
         
         # Initialize weights
@@ -173,7 +172,215 @@ class FourierPINN(nn.Module):
             # Return dummy loss with gradient support
             return torch.sum(Z_pred * 0.0)
 
+class CompactFourierPINN(nn.Module):
+    """
+    Ultra-compact Fourier PINN for GRMHD C2P
+    Target: <500 FLOPs, ~100-200 parameters
+    """
+    def __init__(self, num_fourier_features=8, fourier_sigma=5.0, physics_weight=1.0, dtype=torch.float64):
+        super().__init__()
+        
+        # Store constants as tensors
+        self.register_buffer('two_pi', torch.tensor(2.0 * torch.pi, dtype=dtype))
+        self.physics_weight = physics_weight
+        
+        # MUCH smaller Fourier feature matrix
+        fourier_matrix = torch.randn(3, num_fourier_features, dtype=dtype) * fourier_sigma
+        self.register_buffer('fourier_B', fourier_matrix)
+        
+        # Tiny network: 16 -> 8 -> 1
+        fourier_dim = 2 * num_fourier_features  # sin + cos
+        self.network = nn.Sequential(
+            nn.Linear(fourier_dim, 8, dtype=dtype),   # 16*8 + 8 = 136 FLOPs
+            nn.SiLU(),                                # 8 FLOPs
+            nn.Linear(8, 1, dtype=dtype),             # 8*1 + 1 = 9 FLOPs
+        )
+        
+        # Initialize weights
+        self.apply(self._init_weights)
+    
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            # Xavier initialization for SiLU
+            nn.init.xavier_uniform_(m.weight, gain=1.0)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+    
+    def forward(self, x):
+        # Fourier feature mapping: [sin(2πBx), cos(2πBx)]
+        x_proj = self.two_pi * (x @ self.fourier_B)  # 3*8 = 24 FLOPs
+        fourier_features = torch.cat([
+            torch.sin(x_proj),    # 8 FLOPs
+            torch.cos(x_proj)     # 8 FLOPs
+        ], dim=-1)
+        
+        return self.network(fourier_features)
+        # Total: ~193 FLOPs, ~145 parameters
+    
+    def physics_loss(self, C, Z_pred, eos):
+        """
+        Physics-informed loss: Z = S / h̃, where h̃ is derived from Z_pred
+        """
+        D = C[:, 0:1]  # Conserved density
+        q = C[:, 1:2]  # τ/D
+        r = C[:, 2:3]  # S/D
+        
+        try:
+            # Compute specific enthalpy from prediction
+            htilde = h__z(Z_pred, C, eos)
+            # Physics residual: should be zero if physically correct
+            residual = Z_pred - (r / htilde)
+            return torch.mean(residual**2)
+        except Exception as e:
+            print(f"[physics_loss] Failed to compute htilde: {e}")
+            # Return dummy loss with gradient support
+            return torch.sum(Z_pred * 0.0)
 
+
+class UltraCompactPINN(nn.Module):
+    """
+    Even smaller version - just 4 Fourier features
+    Target: <100 FLOPs, ~50 parameters
+    """
+    def __init__(self, num_fourier_features=4, fourier_sigma=3.0, dtype=torch.float64):
+        super().__init__()
+        
+        self.register_buffer('two_pi', torch.tensor(2.0 * torch.pi, dtype=dtype))
+        
+        # Minimal Fourier features
+        fourier_matrix = torch.randn(3, num_fourier_features, dtype=dtype) * fourier_sigma
+        self.register_buffer('fourier_B', fourier_matrix)
+        
+        # Minimal network: 8 -> 1 (no hidden layer!)
+        fourier_dim = 2 * num_fourier_features
+        self.network = nn.Linear(fourier_dim, 1, dtype=dtype)  # 8*1 + 1 = 9 FLOPs
+        
+        # Initialize
+        nn.init.xavier_uniform_(self.network.weight, gain=1.0)
+        nn.init.zeros_(self.network.bias)
+    
+    def forward(self, x):
+        x_proj = self.two_pi * (x @ self.fourier_B)  # 3*4 = 12 FLOPs
+        fourier_features = torch.cat([
+            torch.sin(x_proj),    # 4 FLOPs
+            torch.cos(x_proj)     # 4 FLOPs
+        ], dim=-1)
+        
+        return self.network(fourier_features)
+        # Total: ~29 FLOPs, ~17 parameters
+
+    def physics_loss(self, C, Z_pred, eos):
+        """
+        Physics-informed loss: Z = S / h̃, where h̃ is derived from Z_pred
+        """
+        D = C[:, 0:1]  # Conserved density
+        q = C[:, 1:2]  # τ/D
+        r = C[:, 2:3]  # S/D
+        
+        try:
+            # Compute specific enthalpy from prediction
+            htilde = h__z(Z_pred, C, eos)
+            # Physics residual: should be zero if physically correct
+            residual = Z_pred - (r / htilde)
+            return torch.mean(residual**2)
+        except Exception as e:
+            print(f"[physics_loss] Failed to compute htilde: {e}")
+            # Return dummy loss with gradient support
+            return torch.sum(Z_pred * 0.0)
+
+
+class PhysicsGuided_TinyPINN(nn.Module):
+    """
+    Physics-guided approach: Start with analytical approximation,
+    then learn small corrections
+    """
+    def __init__(self, dtype=torch.float64):
+        super().__init__()
+        
+        # Tiny correction network
+        self.correction_net = nn.Sequential(
+            nn.Linear(3, 6, dtype=dtype),    # 3*6 + 6 = 24 FLOPs
+            nn.Tanh(),                       # 6 FLOPs
+            nn.Linear(6, 1, dtype=dtype),    # 6*1 + 1 = 7 FLOPs
+        )
+        
+        # Small correction scale
+        self.correction_scale = 0.1
+        
+        # Initialize
+        self.apply(self._init_weights)
+    
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight, gain=0.1)  # Small corrections
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+    
+    def analytical_guess(self, C):
+        """
+        Improved physics-based initial guess for Z (Lorentz factor)
+        Based on GRMHD conservative-to-primitive relationships
+        """
+        D = C[:, 0:1]  # Conserved density
+        q = C[:, 1:2]  # τ/D (internal energy density)
+        r = C[:, 2:3]  # S/D (momentum density)
+        
+        # Method 1: Newton-Raphson inspired guess
+        # For cold matter: Z ≈ sqrt(1 + r²)
+        # For hot matter: include thermal pressure effects
+        
+        # Basic kinematic guess
+        z_kinematic = torch.sqrt(1.0 + r**2)
+        
+        # Thermal correction based on internal energy
+        # Higher q suggests more thermal energy → higher Z
+        thermal_factor = 1.0 + 0.5 * q  # Empirical correction
+        
+        # Relativistic correction for high velocities
+        # When r is large, additional relativistic effects
+        relativistic_correction = 1.0 + 0.1 * r**2 / (1.0 + r**2)
+        
+        # Combined guess
+        z_guess = z_kinematic * thermal_factor * relativistic_correction
+        
+        # Ensure physical bounds: Z ≥ 1
+        z_guess = torch.clamp(z_guess, min=1.0)
+        
+        return z_guess
+    
+    def forward(self, x):
+        # Start with physics-based guess
+        z_baseline = self.analytical_guess(x)
+        
+        # Small learned correction
+        correction = self.correction_net(x)
+        
+        return z_baseline + self.correction_scale * correction
+        # Total: ~37 FLOPs + analytical_guess, ~43 parameters
+
+    def physics_loss(self, C, Z_pred, eos):
+        """
+        Physics-informed loss: Z = S / h̃, where h̃ is derived from Z_pred
+        """
+        D = C[:, 0:1]  # Conserved density
+        q = C[:, 1:2]  # τ/D
+        r = C[:, 2:3]  # S/D
+        
+        try:
+            # Compute specific enthalpy from prediction
+            htilde = h__z(Z_pred, C, eos)
+            # Physics residual: should be zero if physically correct
+            residual = Z_pred - (r / htilde)
+            return torch.mean(residual**2)
+        except Exception as e:
+            print(f"[physics_loss] Failed to compute htilde: {e}")
+            # Return dummy loss with gradient support
+            return torch.sum(Z_pred * 0.0)
+
+
+
+
+    
 # =============================================================================
 # MULTI-SCALE NETWORK
 # =============================================================================
