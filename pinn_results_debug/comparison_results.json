@@ -1,0 +1,121 @@
+{
+  "TinyPINN_V1_4nodes": {
+    "n_parameters": 21,
+    "estimated_flops": 24,
+    "final_train_loss": 0.8182379699609246,
+    "final_val_loss": 0.8161697986423524,
+    "test_results": {
+      "abs_error_mean": 1.0425191200244062,
+      "abs_error_max": 1.7300474572743905,
+      "abs_error_std": 0.5135177189392475,
+      "rel_error_mean": 126935055.85567139,
+      "rel_error_max": 1280951253.9984634,
+      "rel_error_std": 382844583.1083484,
+      "physics_error": 0.28785212106048635,
+      "inference_time": 0.0020792484283447266,
+      "correlation": 0.9737697185714829
+    }
+  },
+  "TinyPINN_V2_6nodes": {
+    "n_parameters": 31,
+    "estimated_flops": 34,
+    "final_train_loss": 0.821068450656678,
+    "final_val_loss": 0.8138834624032315,
+    "test_results": {
+      "abs_error_mean": 1.0407290201151922,
+      "abs_error_max": 1.726994960723022,
+      "abs_error_std": 0.5125270832446664,
+      "rel_error_mean": 138395449.82329327,
+      "rel_error_max": 1513888639.8495052,
+      "rel_error_std": 417508375.69513035,
+      "physics_error": 0.28707208522021577,
+      "inference_time": 0.002048015594482422,
+      "correlation": 0.9708189224852863
+    }
+  },
+  "TinyPINN_V3_8x4": {
+    "n_parameters": 73,
+    "estimated_flops": 79,
+    "final_train_loss": 0.8249461479290533,
+    "final_val_loss": 0.8167193354364215,
+    "test_results": {
+      "abs_error_mean": 1.042951920751823,
+      "abs_error_max": 1.7306183484137145,
+      "abs_error_std": 0.5136827051238413,
+      "rel_error_mean": 119664792.13621281,
+      "rel_error_max": 1202580096.2824287,
+      "rel_error_std": 360803476.31202054,
+      "physics_error": 0.2880492221184367,
+      "inference_time": 0.0027616024017333984,
+      "correlation": 0.9734060248616374
+    }
+  },
+  "TinyPINN_V4_16x8": {
+    "n_parameters": 209,
+    "estimated_flops": 215,
+    "final_train_loss": 0.8193998129603894,
+    "final_val_loss": 0.8167486460305637,
+    "test_results": {
+      "abs_error_mean": 1.0429768092363867,
+      "abs_error_max": 1.7306614502681654,
+      "abs_error_std": 0.5136934652141589,
+      "rel_error_mean": 121776711.07715666,
+      "rel_error_max": 1224231589.8524654,
+      "rel_error_std": 367171244.21679777,
+      "physics_error": 0.28805888698683985,
+      "inference_time": 0.002805948257446289,
+      "correlation": 0.9662758947013563
+    }
+  },
+  "TinyPINN_V5_32x16x8": {
+    "n_parameters": 801,
+    "estimated_flops": 810,
+    "final_train_loss": 0.817465878998573,
+    "final_val_loss": 0.8168756824788408,
+    "test_results": {
+      "abs_error_mean": 1.0430755683250437,
+      "abs_error_max": 1.7308224433739727,
+      "abs_error_std": 0.513745852269215,
+      "rel_error_mean": 120168584.35473831,
+      "rel_error_max": 1202706694.6599782,
+      "rel_error_std": 362321927.81998086,
+      "physics_error": 0.28810286517349093,
+      "inference_time": 0.004004001617431641,
+      "correlation": 0.9695944164031938
+    }
+  },
+  "FourierPINN_Small": {
+    "n_parameters": 81,
+    "estimated_flops": 84,
+    "final_train_loss": 0.817622306425241,
+    "final_val_loss": 0.8831252862435657,
+    "test_results": {
+      "abs_error_mean": 1.0610624575713903,
+      "abs_error_max": 1.9395086087981934,
+      "abs_error_std": 0.5934656561477412,
+      "rel_error_mean": 30112556549.16132,
+      "rel_error_max": 832612496436.699,
+      "rel_error_std": 106919833271.56435,
+      "physics_error": 0.33079273818346805,
+      "inference_time": 0.0029494762420654297,
+      "correlation": -0.18273879403216423
+    }
+  },
+  "PhysicsGuided_TinyPINN": {
+    "n_parameters": 31,
+    "estimated_flops": 34,
+    "final_train_loss": 2.2041663292121543,
+    "final_val_loss": 2.447009878904447,
+    "test_results": {
+      "abs_error_mean": 1.0761385399683772,
+      "abs_error_max": 3.064261814472803,
+      "abs_error_std": 0.40916164874259475,
+      "rel_error_mean": 100776427441.33168,
+      "rel_error_max": 1077907883506.7513,
+      "rel_error_std": 303944580571.8166,
+      "physics_error": 1.931717043580489,
+      "inference_time": 0.0041046142578125,
+      "correlation": 0.9089306402884602
+    }
+  }
+}

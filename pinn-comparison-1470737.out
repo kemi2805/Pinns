@@ -1,0 +1,169 @@
+Job started at: Wed Jul 16 04:06:32 PM CEST 2025
+Job ID: 1470737
+Node: gpu12-007
+Working directory: /home/astro/miler/codes/Pinns
+Activating Python environment...
+Python path: /scratch/astro/miler/python-env/pytorch/bin/python
+Changing to working directory...
+Current directory: /home/astro/miler/codes/Pinns
+Files in directory:
+-rw-r--r-- 1 miler astro 32290 Jul 16 16:05 test_many_pinn.py
+Starting PINN comparison at: Wed Jul 16 04:06:32 PM CEST 2025
+PINN Size Comparison Study
+==================================================
+Training samples: 200
+Validation samples: 100
+Test samples: 100
+Batch size: 256
+Epochs: 200
+Learning rate: 0.001
+Physics weight: 1.0
+Loss function: Log-Cosh
+Output directory: ./pinn_results_sbatch
+Using device: cuda
+
+Generating datasets...
+Generating 200 test samples...
+Generating 100 test samples...
+Generating 100 test samples...
+
+============================================================
+Testing TinyPINN_V1_4nodes
+============================================================
+Parameters: 21
+Estimated FLOPs: 24
+Training model with 21 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 8.02e-01, Val Loss = 7.67e-01
+Epoch  50: Train Loss = 4.65e-03, Val Loss = 5.12e-03
+Epoch 100: Train Loss = 1.84e-03, Val Loss = 1.99e-03
+Epoch 150: Train Loss = 8.12e-04, Val Loss = 1.06e-03
+Evaluating on test set...
+
+Results for TinyPINN_V1_4nodes:
+  Parameters: 21
+  Mean Abs Error: 9.54e-03
+  Mean Rel Error: 2.55e+08
+  Physics Error: 3.34e-04
+  Correlation: 0.998994
+  Inference Time: 0.0026s
+Model saved to ./pinn_results_sbatch/model_TinyPINN_V1_4nodes.pth
+
+============================================================
+Testing TinyPINN_V2_6nodes
+============================================================
+Parameters: 31
+Estimated FLOPs: 34
+Training model with 31 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 7.92e-01, Val Loss = 7.40e-01
+Epoch  50: Train Loss = 4.21e-03, Val Loss = 4.96e-03
+Epoch 100: Train Loss = 1.69e-03, Val Loss = 1.90e-03
+Epoch 150: Train Loss = 9.72e-04, Val Loss = 1.24e-03
+Evaluating on test set...
+
+Results for TinyPINN_V2_6nodes:
+  Parameters: 31
+  Mean Abs Error: 1.03e-02
+  Mean Rel Error: 3.32e+08
+  Physics Error: 3.95e-04
+  Correlation: 0.998822
+  Inference Time: 0.0024s
+Model saved to ./pinn_results_sbatch/model_TinyPINN_V2_6nodes.pth
+
+============================================================
+Testing TinyPINN_V3_8x4
+============================================================
+Parameters: 73
+Estimated FLOPs: 79
+Training model with 73 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 7.92e-01, Val Loss = 7.27e-01
+Epoch  50: Train Loss = 1.60e-03, Val Loss = 1.75e-03
+Epoch 100: Train Loss = 8.63e-05, Val Loss = 1.18e-04
+Epoch 150: Train Loss = 1.73e-05, Val Loss = 2.12e-05
+Evaluating on test set...
+
+Results for TinyPINN_V3_8x4:
+  Parameters: 73
+  Mean Abs Error: 1.88e-03
+  Mean Rel Error: 3.97e+07
+  Physics Error: 7.03e-06
+  Correlation: 0.999981
+  Inference Time: 0.0030s
+Model saved to ./pinn_results_sbatch/model_TinyPINN_V3_8x4.pth
+
+============================================================
+Testing TinyPINN_V4_16x8
+============================================================
+Parameters: 209
+Estimated FLOPs: 215
+Training model with 209 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 7.64e-01, Val Loss = 5.62e-01
+Epoch  50: Train Loss = 1.62e-03, Val Loss = 2.95e-03
+Epoch 100: Train Loss = 3.68e-04, Val Loss = 4.09e-04
+Epoch 150: Train Loss = 3.08e-04, Val Loss = 3.39e-04
+Evaluating on test set...
+
+Results for TinyPINN_V4_16x8:
+  Parameters: 209
+  Mean Abs Error: 7.31e-03
+  Mean Rel Error: 3.86e+08
+  Physics Error: 1.90e-04
+  Correlation: 0.999443
+  Inference Time: 0.0040s
+Model saved to ./pinn_results_sbatch/model_TinyPINN_V4_16x8.pth
+
+============================================================
+Testing TinyPINN_V5_32x16x8
+============================================================
+Parameters: 801
+Estimated FLOPs: 810
+Training model with 801 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 6.58e-01, Val Loss = 5.46e-02
+Epoch  50: Train Loss = 8.16e-04, Val Loss = 1.06e-03
+Epoch 100: Train Loss = 1.49e-04, Val Loss = 2.70e-04
+Epoch 150: Train Loss = 1.06e-04, Val Loss = 1.67e-04
+Evaluating on test set...
+
+Results for TinyPINN_V5_32x16x8:
+  Parameters: 801
+  Mean Abs Error: 5.81e-03
+  Mean Rel Error: 4.34e+08
+  Physics Error: 6.82e-05
+  Correlation: 0.999824
+  Inference Time: 0.0037s
+Model saved to ./pinn_results_sbatch/model_TinyPINN_V5_32x16x8.pth
+
+============================================================
+Testing FourierPINN_Small
+============================================================
+Parameters: 81
+Estimated FLOPs: 84
+Training model with 81 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 4.13e-01, Val Loss = 2.62e-01
+Epoch  50: Train Loss = 1.20e-02, Val Loss = 3.00e-02
+Epoch 100: Train Loss = 9.93e-03, Val Loss = 2.54e-02
+Epoch 150: Train Loss = 9.21e-03, Val Loss = 2.39e-02
+Evaluating on test set...
+
+Results for FourierPINN_Small:
+  Parameters: 81
+  Mean Abs Error: 4.07e-02
+  Mean Rel Error: 5.56e+08
+  Physics Error: 5.03e-03
+  Correlation: 0.974921
+  Inference Time: 0.0039s
+Model saved to ./pinn_results_sbatch/model_FourierPINN_Small.pth
+
+============================================================
+Testing PhysicsGuided_TinyPINN
+============================================================
+Parameters: 31
+Estimated FLOPs: 34
+Training model with 31 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 1.93e+00, Val Loss = 2.00e+00

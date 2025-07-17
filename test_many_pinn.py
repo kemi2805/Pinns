@@ -81,6 +81,14 @@ def plot_zeta_scatter_analysis(Z_true, Z_pred, save_fig=False, fig_path=None):
         plt.savefig(fig_path, dpi=300, bbox_inches='tight')
     plt.close()
 
+def log_cosh_loss(y_pred, y_true):
+    """
+    Logarithm of the hyperbolic cosine of the prediction error.
+    More robust to outliers than MSE.
+    """
+    diff = y_pred - y_true
+    return torch.mean(torch.log(torch.cosh(diff)))
+
 class TinyPINN_Variant1(nn.Module):
     """Ultra-tiny: 3->4->1 (25 params)"""
     def __init__(self, dtype=torch.float64):
@@ -281,6 +289,95 @@ class FourierPINN_Small(nn.Module):
             return torch.sum(Z_pred * 0.0)
 
 
+class PhysicsGuided_TinyPINN(nn.Module):
+    """
+    Physics-guided approach: Start with analytical approximation,
+    then learn small corrections
+    """
+    def __init__(self, dtype=torch.float64):
+        super().__init__()
+        
+        # Tiny correction network
+        self.correction_net = nn.Sequential(
+            nn.Linear(3, 6, dtype=dtype),    # 3*6 + 6 = 24 FLOPs
+            nn.Tanh(),                       # 6 FLOPs
+            nn.Linear(6, 1, dtype=dtype),    # 6*1 + 1 = 7 FLOPs
+        )
+        
+        # Small correction scale
+        self.correction_scale = 0.1
+        
+        # Initialize
+        self.apply(self._init_weights)
+    
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight, gain=0.1)  # Small corrections
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+    
+    def analytical_guess(self, C):
+        """
+        Improved physics-based initial guess for Z (Lorentz factor)
+        Based on GRMHD conservative-to-primitive relationships
+        """
+        D = C[:, 0:1]  # Conserved density
+        q = C[:, 1:2]  # τ/D (internal energy density)
+        r = C[:, 2:3]  # S/D (momentum density)
+        
+        # Method 1: Newton-Raphson inspired guess
+        # For cold matter: Z ≈ sqrt(1 + r²)
+        # For hot matter: include thermal pressure effects
+        
+        # Basic kinematic guess
+        z_kinematic = torch.sqrt(1.0 + r**2)
+        
+        # Thermal correction based on internal energy
+        # Higher q suggests more thermal energy → higher Z
+        thermal_factor = 1.0 + 0.5 * q  # Empirical correction
+        
+        # Relativistic correction for high velocities
+        # When r is large, additional relativistic effects
+        relativistic_correction = 1.0 + 0.1 * r**2 / (1.0 + r**2)
+        
+        # Combined guess
+        z_guess = z_kinematic * thermal_factor * relativistic_correction
+        
+        # Ensure physical bounds: Z ≥ 1
+        z_guess = torch.clamp(z_guess, min=1.0)
+        
+        return z_guess
+    
+    def forward(self, x):
+        # Start with physics-based guess
+        z_baseline = self.analytical_guess(x)
+        
+        # Small learned correction
+        correction = self.correction_net(x)
+        
+        return z_baseline + self.correction_scale * correction
+        # Total: ~37 FLOPs + analytical_guess, ~43 parameters
+
+    def physics_loss(self, C, Z_pred, eos):
+        """
+        Physics-informed loss: Z = S / h̃, where h̃ is derived from Z_pred
+        """
+        D = C[:, 0:1]  # Conserved density
+        q = C[:, 1:2]  # τ/D
+        r = C[:, 2:3]  # S/D
+        
+        try:
+            # Compute specific enthalpy from prediction
+            htilde = h__z(Z_pred, C, eos)
+            # Physics residual: should be zero if physically correct
+            residual = Z_pred - (r / htilde)
+            return torch.mean(residual**2)
+        except Exception as e:
+            print(f"[physics_loss] Failed to compute htilde: {e}")
+            # Return dummy loss with gradient support
+            return torch.sum(Z_pred * 0.0)
+
+
 def count_parameters(model):
     """Count trainable parameters in model"""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -323,11 +420,10 @@ def generate_test_data(metric_obj, eos, n_samples, device):
     """Generate test dataset"""
     print(f"Generating {n_samples} test samples...")
     
-    # Generate random state
-    C_test, Z_test = setup_initial_state_random(
+    # Generate random state using meshgrid_cold instead of random
+    C_test, Z_test = setup_initial_state_meshgrid_cold(
         metric_obj, eos, n_samples, device,
-        lrhomin=-12, lrhomax=-2.8,
-        ltempmin=-1, ltempmax=2.3,
+        lrhomin=-11, lrhomax=-2.8,
         Wmin=1.0, Wmax=2.0
     )
     
@@ -338,7 +434,7 @@ def generate_test_data(metric_obj, eos, n_samples, device):
     return C_test, Z_test
 
 
-def train_model(model, train_loader, val_loader, eos, device, epochs=200, lr=1e-3, physics_weight=1.0):
+def train_model(model, train_loader, val_loader, eos, device, epochs=200, lr=1e-3, physics_weight=1.0, use_log_cosh=False):
     """Train a single model"""
     model = model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-6)
@@ -349,6 +445,7 @@ def train_model(model, train_loader, val_loader, eos, device, epochs=200, lr=1e-
     best_val_loss = float('inf')
     
     print(f"Training model with {count_parameters(model)} parameters...")
+    print(f"Using {'Log-Cosh' if use_log_cosh else 'MSE'} loss...")
     
     for epoch in range(epochs):
         # Training
@@ -365,8 +462,11 @@ def train_model(model, train_loader, val_loader, eos, device, epochs=200, lr=1e-
             # Forward pass
             Z_pred = model(C_batch)
             
-            # Data loss (MSE)
-            data_loss = torch.mean((Z_pred - Z_batch)**2)
+            # Data loss - choose between MSE and Log-Cosh
+            if use_log_cosh:
+                data_loss = log_cosh_loss(Z_pred, Z_batch)
+            else:
+                data_loss = torch.mean((Z_pred - Z_batch)**2)
             
             # Physics loss
             physics_loss = model.physics_loss(C_batch, Z_pred, eos)
@@ -393,7 +493,10 @@ def train_model(model, train_loader, val_loader, eos, device, epochs=200, lr=1e-
                 Z_batch = Z_batch.to(device, dtype=torch.float64)
                 Z_pred = model(C_batch)
                 
-                data_loss = torch.mean((Z_pred - Z_batch)**2)
+                if use_log_cosh:
+                    data_loss = log_cosh_loss(Z_pred, Z_batch)
+                else:
+                    data_loss = torch.mean((Z_pred - Z_batch)**2)
                 physics_loss = model.physics_loss(C_batch, Z_pred, eos)
                 total_loss = data_loss + physics_weight * physics_loss
                 
@@ -444,6 +547,25 @@ def evaluate_model(model, test_C, test_Z, eos, device):
         lambda C: model(C), test_C, test_Z, eos
     )
     
+    # Safe correlation calculation
+    Z_pred_flat = Z_pred.flatten()
+    Z_test_flat = test_Z.flatten()
+    
+    # Check if we have enough samples and variance for correlation
+    if len(Z_pred_flat) > 1 and torch.std(Z_pred_flat) > 1e-8 and torch.std(Z_test_flat) > 1e-8:
+        try:
+            correlation_matrix = torch.corrcoef(torch.stack([Z_pred_flat, Z_test_flat]))
+            correlation = correlation_matrix[0, 1].item()
+        except:
+            # Fallback: manual correlation calculation
+            mean_pred = torch.mean(Z_pred_flat)
+            mean_true = torch.mean(Z_test_flat)
+            numerator = torch.sum((Z_pred_flat - mean_pred) * (Z_test_flat - mean_true))
+            denominator = torch.sqrt(torch.sum((Z_pred_flat - mean_pred)**2) * torch.sum((Z_test_flat - mean_true)**2))
+            correlation = (numerator / (denominator + 1e-12)).item()
+    else:
+        correlation = 0.0  # Default value when correlation can't be computed
+    
     return {
         'abs_error_mean': torch.mean(abs_error).item(),
         'abs_error_max': torch.max(abs_error).item(),
@@ -453,7 +575,7 @@ def evaluate_model(model, test_C, test_Z, eos, device):
         'rel_error_std': torch.std(rel_error).item(),
         'physics_error': physics_error.item(),
         'inference_time': inference_time,
-        'correlation': torch.corrcoef(torch.cat([Z_pred.flatten(), test_Z.flatten()]))[0, 1].item(),
+        'correlation': correlation,
         'comprehensive_errors': errors,
         'Z_pred': Z_pred_out,
         'Z_true': Z_true_out
@@ -491,6 +613,7 @@ def run_comparison(args):
         'TinyPINN_V4_16x8': TinyPINN_Variant4(),
         'TinyPINN_V5_32x16x8': TinyPINN_Variant5(),
         'FourierPINN_Small': FourierPINN_Small(),
+        'PhysicsGuided_TinyPINN': PhysicsGuided_TinyPINN(),  # Physics-guided with analytical guess
     }
     
     results = {}
@@ -511,7 +634,7 @@ def run_comparison(args):
         trained_model, train_losses, val_losses = train_model(
             model, train_loader, val_loader, eos, device,
             epochs=args.epochs, lr=args.learning_rate, 
-            physics_weight=args.physics_weight
+            physics_weight=args.physics_weight, use_log_cosh=args.use_log_cosh
         )
         
         # Evaluate model
@@ -629,11 +752,11 @@ def create_plots(results, output_dir):
     plt.close()
     
     # Create individual training curves
-    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    fig, axes = plt.subplots(3, 3, figsize=(18, 18))  # Increased to 3x3 for 7 models
     axes = axes.flatten()
     
     for i, (name, result) in enumerate(results.items()):
-        if i >= 6:
+        if i >= 9:
             break
         ax = axes[i]
         epochs = range(len(result['train_losses']))
@@ -644,6 +767,10 @@ def create_plots(results, output_dir):
         ax.set_title(f'{name} ({result["n_parameters"]} params)')
         ax.legend()
         ax.grid(True, alpha=0.3)
+    
+    # Hide unused subplots
+    for i in range(len(results), 9):
+        axes[i].set_visible(False)
     
     plt.tight_layout()
     plt.savefig(f'{output_dir}/training_curves.png', dpi=300, bbox_inches='tight')
@@ -659,9 +786,13 @@ def main():
     parser.add_argument('--epochs', type=int, default=200, help='Number of training epochs')
     parser.add_argument('--learning_rate', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--physics_weight', type=float, default=1.0, help='Physics loss weight')
+    parser.add_argument('--use_mse', action='store_true', help='Use MSE loss instead of Log-Cosh (default is Log-Cosh)')
     parser.add_argument('--output_dir', type=str, default='./pinn_size_comparison', help='Output directory')
     
     args = parser.parse_args()
+    
+    # Set use_log_cosh based on the flag (default is True, set to False if --use_mse is specified)
+    args.use_log_cosh = not args.use_mse
     
     # Create output directory
     os.makedirs(args.output_dir, exist_ok=True)
@@ -675,6 +806,7 @@ def main():
     print(f"Epochs: {args.epochs}")
     print(f"Learning rate: {args.learning_rate}")
     print(f"Physics weight: {args.physics_weight}")
+    print(f"Loss function: {'Log-Cosh' if args.use_log_cosh else 'MSE'}")
     print(f"Output directory: {args.output_dir}")
     
     # Run comparison
