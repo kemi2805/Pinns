@@ -1,4 +1,5 @@
 #!/scratch/astro/miler/python-env/pytorch/bin/python3
+# test_many_pinn.py
 """
 Comprehensive PINN Size Comparison Script for PhysicsGuided_TinyPINN
 Tests different network architectures with the same input data to evaluate size vs performance tradeoffs

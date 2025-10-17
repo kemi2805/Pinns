@@ -317,6 +317,11 @@ def plot_error_analysis_with_zeta_absolute(solver, test_C, test_Z, N=50, save_fi
     Z_true = test_Z.view(-1, 1)
     print(f"Z_true shape: {Z_true.shape}")
     print(f"Z_true sample: {Z_true[:5].flatten()}")
+
+    print(f"Test C range: [{test_C.min():.6f}, {test_C.max():.6f}]")
+    print(f"Test Z range: [{test_Z.min():.6f}, {test_Z.max():.6f}]")
+    print(f"Training C_min/max: {solver.C_min.flatten()}, {solver.C_max.flatten()}")
+    print(f"Training Z_min/max: {solver.Z_min.item():.6f}, {solver.Z_max.item():.6f}")
     
     rho_true = rho__z(Z_true, test_C)
     W_true = W__z(Z_true)
@@ -539,3 +544,132 @@ def plot_error_analysis_with_zeta_absolute(solver, test_C, test_Z, N=50, save_fi
               f"Abs Error={Z_error_np[idx]:.2e}, Rel Error={rel_error:.2e}")
     
     return errors, Z_pred, Z_true
+
+def plot_zeta_scatter_analysis_with_density(Z_true, Z_pred, C_test, eos, save_fig=False, fig_path=None):
+    """
+    Create scatter plots comparing true vs predicted zeta values with density-based coloring
+    
+    Args:
+        Z_true: True zeta values
+        Z_pred: Predicted zeta values  
+        C_test: Conservative variables [D, τ/D, S/D]
+        eos: Equation of state object
+        save_fig: Whether to save the figure
+        fig_path: Path to save figure
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
+    
+    # Convert to numpy
+    Z_true_np = Z_true.detach().cpu().numpy().flatten()
+    Z_pred_np = Z_pred.detach().cpu().numpy().flatten()
+    
+    # Calculate densities for color coding
+    # For true values
+    rho_true = rho__z(Z_true, C_test)
+    rho_true_np = rho_true.detach().cpu().numpy().flatten()
+    
+    # For predicted values
+    rho_pred = rho__z(Z_pred, C_test)
+    rho_pred_np = rho_pred.detach().cpu().numpy().flatten()
+    
+    # Create figure with larger size for colorbar
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+    
+    # Plot 1: True vs Predicted (colored by true density)
+    scatter1 = axes[0].scatter(Z_true_np, Z_pred_np, 
+                              c=rho_true_np, 
+                              alpha=0.7, s=25, 
+                              cmap='plasma',
+                              norm=LogNorm(vmin=rho_true_np.min(), vmax=rho_true_np.max()))
+    
+    axes[0].plot([Z_true_np.min(), Z_true_np.max()],
+                [Z_true_np.min(), Z_true_np.max()], 'r--', lw=2, label='Perfect prediction')
+    
+    axes[0].set_xlabel('True Zeta (ζ)', fontsize=12)
+    axes[0].set_ylabel('Predicted Zeta (ζ)', fontsize=12)
+    axes[0].set_title('True vs Predicted Zeta\n(Colored by True Density)', fontsize=14, fontweight='bold')
+    axes[0].grid(True, alpha=0.3)
+    axes[0].legend()
+    
+    # Add colorbar
+    cbar1 = plt.colorbar(scatter1, ax=axes[0])
+    cbar1.set_label('True Density (ρ)', fontsize=12)
+    
+    # Add correlation coefficient
+    correlation = np.corrcoef(Z_true_np, Z_pred_np)[0,1]
+    axes[0].text(0.05, 0.95, f'Correlation: {correlation:.6f}',
+                transform=axes[0].transAxes, fontsize=12,
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    
+    # Plot 2: Residual plot (colored by true density)
+    residuals = Z_pred_np - Z_true_np
+    scatter2 = axes[1].scatter(Z_true_np, residuals, 
+                              c=rho_true_np,
+                              alpha=0.7, s=25,
+                              cmap='plasma',
+                              norm=LogNorm(vmin=rho_true_np.min(), vmax=rho_true_np.max()))
+    
+    axes[1].axhline(y=0, color='r', linestyle='--', lw=2)
+    axes[1].set_xlabel('True Zeta (ζ)', fontsize=12)
+    axes[1].set_ylabel('Residuals (Pred - True)', fontsize=12)
+    axes[1].set_title('Zeta Prediction Residuals\n(Colored by True Density)', fontsize=14, fontweight='bold')
+    axes[1].grid(True, alpha=0.3)
+    
+    # Add colorbar
+    cbar2 = plt.colorbar(scatter2, ax=axes[1])
+    cbar2.set_label('True Density (ρ)', fontsize=12)
+    
+    # Add residual statistics
+    residual_std = np.std(residuals)
+    residual_mean = np.mean(residuals)
+    axes[1].text(0.05, 0.95, f'Mean: {residual_mean:.2e}\nStd: {residual_std:.2e}',
+                transform=axes[1].transAxes, fontsize=12,
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    
+    # Plot 3: Density comparison (True vs Predicted density)
+    scatter3 = axes[2].scatter(rho_true_np, rho_pred_np,
+                              c=Z_true_np,
+                              alpha=0.7, s=25,
+                              cmap='coolwarm')
+    
+    axes[2].plot([rho_true_np.min(), rho_true_np.max()],
+                [rho_true_np.min(), rho_true_np.max()], 'r--', lw=2, label='Perfect prediction')
+    
+    axes[2].set_xlabel('True Density (ρ)', fontsize=12)
+    axes[2].set_ylabel('Predicted Density (ρ)', fontsize=12)
+    axes[2].set_title('True vs Predicted Density\n(Colored by True Zeta)', fontsize=14, fontweight='bold')
+    axes[2].set_xscale('log')
+    axes[2].set_yscale('log')
+    axes[2].grid(True, alpha=0.3)
+    axes[2].legend()
+    
+    # Add colorbar
+    cbar3 = plt.colorbar(scatter3, ax=axes[2])
+    cbar3.set_label('True Zeta (ζ)', fontsize=12)
+    
+    # Add density correlation
+    rho_correlation = np.corrcoef(rho_true_np, rho_pred_np)[0,1]
+    axes[2].text(0.05, 0.95, f'Density Correlation: {rho_correlation:.6f}',
+                transform=axes[2].transAxes, fontsize=12,
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    
+    plt.tight_layout()
+    
+    if save_fig:
+        if fig_path is None:
+            fig_path = 'zeta_scatter_analysis_with_density.png'
+        plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+        print(f"Zeta scatter analysis with density coloring saved to {fig_path}")
+    
+    plt.show()
+    
+    # Print summary statistics
+    print("\n=== Analysis Summary ===")
+    print(f"Zeta correlation: {correlation:.6f}")
+    print(f"Density correlation: {rho_correlation:.6f}")
+    print(f"Residual mean: {residual_mean:.2e}")
+    print(f"Residual std: {residual_std:.2e}")
+    print(f"Density range (true): {rho_true_np.min():.2e} to {rho_true_np.max():.2e}")
+    print(f"Zeta range (true): {Z_true_np.min():.3f} to {Z_true_np.max():.3f}")

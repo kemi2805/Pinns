@@ -567,3 +567,96 @@ class DeepResidualPINN(nn.Module):
             print(f"[physics_loss] Failed to compute htilde: {e}")
             # Return dummy loss with gradient support
             return torch.sum(Z_pred * 0.0)
+
+
+# =============================================================================
+# Many different Physics-Guided PINN architectures
+# =============================================================================
+
+class PhysicsGuided_TinyPINNv2(nn.Module):
+    """
+    Physics-guided approach: Start with analytical approximation,
+    then learn small corrections
+    """
+    def __init__(self, dtype=torch.float64):
+        super().__init__()
+        
+        # Tiny correction network
+        self.correction_net = nn.Sequential(
+            nn.Linear(3, 12, dtype=dtype),    # 3*6 + 6 = 24 FLOPs
+            nn.Tanh(),                       # 6 FLOPs
+            nn.Linear(12, 1, dtype=dtype),    # 6*1 + 1 = 7 FLOPs
+        )
+        
+        # Small correction scale
+        self.correction_scale = 0.1
+        
+        # Initialize
+        self.apply(self._init_weights)
+    
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight, gain=0.1)  # Small corrections
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+    
+    def analytical_guess(self, C):
+        """
+        Improved physics-based initial guess for Z (Lorentz factor)
+        Based on GRMHD conservative-to-primitive relationships
+        """
+        D = C[:, 0:1]  # Conserved density
+        q = C[:, 1:2]  # τ/D (internal energy density)
+        r = C[:, 2:3]  # S/D (momentum density)
+        
+        # Method 1: Newton-Raphson inspired guess
+        # For cold matter: Z ≈ sqrt(1 + r²)
+        # For hot matter: include thermal pressure effects
+        
+        # Basic kinematic guess
+        z_kinematic = torch.sqrt(1.0 + r**2)
+        
+        # Thermal correction based on internal energy
+        # Higher q suggests more thermal energy → higher Z
+        thermal_factor = 1.0 + 0.5 * q  # Empirical correction
+        
+        # Relativistic correction for high velocities
+        # When r is large, additional relativistic effects
+        relativistic_correction = 1.0 + 0.1 * r**2 / (1.0 + r**2)
+        
+        # Combined guess
+        z_guess = z_kinematic * thermal_factor * relativistic_correction
+        
+        # Ensure physical bounds: Z ≥ 1
+        z_guess = torch.clamp(z_guess, min=1.0)
+        
+        return z_guess
+    
+    def forward(self, x):
+        # Start with physics-based guess
+        z_baseline = self.analytical_guess(x)
+        
+        # Small learned correction
+        correction = self.correction_net(x)
+        
+        return z_baseline + self.correction_scale * correction
+        # Total: ~37 FLOPs + analytical_guess, ~43 parameters
+
+    def physics_loss(self, C, Z_pred, eos):
+        """
+        Physics-informed loss: Z = S / h̃, where h̃ is derived from Z_pred
+        """
+        D = C[:, 0:1]  # Conserved density
+        q = C[:, 1:2]  # τ/D
+        r = C[:, 2:3]  # S/D
+        
+        try:
+            # Compute specific enthalpy from prediction
+            htilde = h__z(Z_pred, C, eos)
+            # Physics residual: should be zero if physically correct
+            residual = Z_pred - (r / htilde)
+            return torch.mean(residual**2)
+        except Exception as e:
+            print(f"[physics_loss] Failed to compute htilde: {e}")
+            # Return dummy loss with gradient support
+            return torch.sum(Z_pred * 0.0)

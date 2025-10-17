@@ -1,0 +1,298 @@
+Job started at: Thu Jul 17 04:03:59 PM CEST 2025
+Job ID: 158755
+Node: gpu1
+Working directory: /mnt/rafast/miler/codes/Pinns
+Activating Python environment...
+Python path: /mnt/rafast/miler/python-env/pytorch/bin/python
+Changing to working directory...
+Current directory: /mnt/rafast/miler/codes/Pinns
+Files in directory:
+-rw-rw-r-- 1 miler miler 32310 Jul 17 15:38 test_many_pinn.py
+Starting PINN comparison at: Thu Jul 17 04:03:59 PM CEST 2025
+Physics-Guided PINN Comparison Study
+============================================================
+Training samples: 400
+Validation samples: 400
+Test samples: 400
+Batch size: 256
+Epochs: 300
+Learning rate: 0.001
+Physics weight: 1.0
+Loss function: Log-Cosh
+Output directory: ./pinn_guided_results
+Using device: cuda
+
+Generating datasets...
+Generating 400 test samples...
+Generating 400 test samples...
+Generating 400 test samples...
+
+============================================================
+Testing PhysicsGuided_TinyPINN_v1
+============================================================
+Parameters: 31
+Estimated FLOPs: 34
+Training model with 31 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 1.28e+00, Val Loss = 6.00e-01
+Epoch  50: Train Loss = 3.01e-04, Val Loss = 2.98e-04
+Epoch 100: Train Loss = 1.28e-04, Val Loss = 1.27e-04
+Epoch 150: Train Loss = 9.51e-05, Val Loss = 9.38e-05
+Epoch 200: Train Loss = 6.97e-05, Val Loss = 6.89e-05
+Epoch 250: Train Loss = 4.54e-05, Val Loss = 4.46e-05
+Evaluating on test set...
+
+Results for PhysicsGuided_TinyPINN_v1:
+  Parameters: 31
+  Mean Abs Error: 1.58e-03
+  Mean Rel Error: 3.37e+07
+  Physics Error: 7.90e-06
+  Correlation: 0.999977
+  Inference Time: 0.0008s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_TinyPINN_v1.pth
+
+============================================================
+Testing PhysicsGuided_TinyPINN_v2
+============================================================
+Parameters: 61
+Estimated FLOPs: 64
+Training model with 61 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 9.04e-01, Val Loss = 1.87e-01
+Epoch  50: Train Loss = 2.12e-04, Val Loss = 2.05e-04
+Epoch 100: Train Loss = 8.05e-05, Val Loss = 8.10e-05
+Epoch 150: Train Loss = 3.87e-05, Val Loss = 3.75e-05
+Epoch 200: Train Loss = 2.96e-05, Val Loss = 3.27e-05
+Epoch 250: Train Loss = 1.80e-05, Val Loss = 1.80e-05
+Evaluating on test set...
+
+Results for PhysicsGuided_TinyPINN_v2:
+  Parameters: 61
+  Mean Abs Error: 1.15e-03
+  Mean Rel Error: 2.95e+07
+  Physics Error: 4.26e-06
+  Correlation: 0.999987
+  Inference Time: 0.0008s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_TinyPINN_v2.pth
+
+============================================================
+Testing PhysicsGuided_TinyPINN_v3
+============================================================
+Parameters: 121
+Estimated FLOPs: 124
+Training model with 121 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 6.04e-01, Val Loss = 6.73e-02
+Epoch  50: Train Loss = 2.76e-04, Val Loss = 2.71e-04
+Epoch 100: Train Loss = 7.03e-05, Val Loss = 6.78e-05
+Epoch 150: Train Loss = 2.15e-05, Val Loss = 2.04e-05
+Epoch 200: Train Loss = 1.20e-05, Val Loss = 1.16e-05
+Epoch 250: Train Loss = 1.04e-05, Val Loss = 1.03e-05
+Evaluating on test set...
+
+Results for PhysicsGuided_TinyPINN_v3:
+  Parameters: 121
+  Mean Abs Error: 1.45e-03
+  Mean Rel Error: 1.30e+07
+  Physics Error: 6.27e-06
+  Correlation: 0.999980
+  Inference Time: 0.0010s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_TinyPINN_v3.pth
+
+============================================================
+Testing PhysicsGuided_DeepTinyPINN_v1
+============================================================
+Parameters: 73
+Estimated FLOPs: 79
+Training model with 73 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 1.34e+00, Val Loss = 8.35e-01
+Epoch  50: Train Loss = 2.34e-04, Val Loss = 2.39e-04
+Epoch 100: Train Loss = 3.29e-05, Val Loss = 3.26e-05
+Epoch 150: Train Loss = 8.11e-06, Val Loss = 8.74e-06
+Epoch 200: Train Loss = 4.73e-06, Val Loss = 4.68e-06
+Epoch 250: Train Loss = 4.60e-06, Val Loss = 4.60e-06
+Evaluating on test set...
+
+Results for PhysicsGuided_DeepTinyPINN_v1:
+  Parameters: 73
+  Mean Abs Error: 9.84e-04
+  Mean Rel Error: 2.74e+07
+  Physics Error: 2.91e-06
+  Correlation: 0.999991
+  Inference Time: 0.0009s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_DeepTinyPINN_v1.pth
+
+============================================================
+Testing PhysicsGuided_DeepTinyPINN_v2
+============================================================
+Parameters: 209
+Estimated FLOPs: 215
+Training model with 209 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 6.08e-01, Val Loss = 3.63e-02
+Epoch  50: Train Loss = 4.55e-05, Val Loss = 4.44e-05
+Epoch 100: Train Loss = 2.28e-05, Val Loss = 2.17e-05
+Epoch 150: Train Loss = 1.40e-05, Val Loss = 1.42e-05
+Epoch 200: Train Loss = 6.76e-06, Val Loss = 6.64e-06
+Epoch 250: Train Loss = 5.32e-06, Val Loss = 5.22e-06
+Evaluating on test set...
+
+Results for PhysicsGuided_DeepTinyPINN_v2:
+  Parameters: 209
+  Mean Abs Error: 7.02e-04
+  Mean Rel Error: 3.85e+07
+  Physics Error: 3.29e-06
+  Correlation: 0.999990
+  Inference Time: 0.0009s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_DeepTinyPINN_v2.pth
+
+============================================================
+Testing PhysicsGuided_LargeCorrection_v1
+============================================================
+Parameters: 61
+Estimated FLOPs: 64
+Training model with 61 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 5.99e-01, Val Loss = 6.54e-02
+Epoch  50: Train Loss = 3.09e-04, Val Loss = 3.05e-04
+Epoch 100: Train Loss = 9.39e-05, Val Loss = 9.35e-05
+Epoch 150: Train Loss = 8.13e-05, Val Loss = 8.11e-05
+Epoch 200: Train Loss = 2.97e-05, Val Loss = 2.88e-05
+Epoch 250: Train Loss = 1.98e-05, Val Loss = 1.95e-05
+Evaluating on test set...
+
+Results for PhysicsGuided_LargeCorrection_v1:
+  Parameters: 61
+  Mean Abs Error: 1.93e-03
+  Mean Rel Error: 2.80e+07
+  Physics Error: 1.06e-05
+  Correlation: 0.999966
+  Inference Time: 0.0004s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_LargeCorrection_v1.pth
+
+============================================================
+Testing PhysicsGuided_SmallCorrection_v1
+============================================================
+Parameters: 61
+Estimated FLOPs: 64
+Training model with 61 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 1.32e+00, Val Loss = 6.65e-01
+Epoch  50: Train Loss = 1.89e-04, Val Loss = 1.84e-04
+Epoch 100: Train Loss = 7.47e-05, Val Loss = 7.67e-05
+Epoch 150: Train Loss = 3.84e-05, Val Loss = 3.75e-05
+Epoch 200: Train Loss = 5.41e-06, Val Loss = 5.33e-06
+Epoch 250: Train Loss = 2.32e-06, Val Loss = 2.24e-06
+Evaluating on test set...
+
+Results for PhysicsGuided_SmallCorrection_v1:
+  Parameters: 61
+  Mean Abs Error: 3.60e-04
+  Mean Rel Error: 1.80e+06
+  Physics Error: 5.35e-07
+  Correlation: 0.999998
+  Inference Time: 0.0005s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_SmallCorrection_v1.pth
+
+============================================================
+Testing PhysicsGuided_ImprovedGuess_v1
+============================================================
+Parameters: 61
+Estimated FLOPs: 64
+Training model with 61 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 2.84e+00, Val Loss = 1.22e+00
+Epoch  50: Train Loss = 1.68e-04, Val Loss = 1.67e-04
+Epoch 100: Train Loss = 6.99e-05, Val Loss = 6.92e-05
+Epoch 150: Train Loss = 5.29e-05, Val Loss = 5.25e-05
+Epoch 200: Train Loss = 4.82e-05, Val Loss = 4.81e-05
+Epoch 250: Train Loss = 4.52e-05, Val Loss = 4.62e-05
+Evaluating on test set...
+
+Results for PhysicsGuided_ImprovedGuess_v1:
+  Parameters: 61
+  Mean Abs Error: 2.99e-03
+  Mean Rel Error: 8.53e+07
+  Physics Error: 2.77e-05
+  Correlation: 0.999916
+  Inference Time: 0.0005s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_ImprovedGuess_v1.pth
+
+============================================================
+Testing PhysicsGuided_ResidualCorrection_v1
+============================================================
+Parameters: 225
+Estimated FLOPs: 231
+Training model with 225 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 1.03e+00, Val Loss = 4.48e-01
+Epoch  50: Train Loss = 8.95e-05, Val Loss = 8.45e-05
+Epoch 100: Train Loss = 1.65e-05, Val Loss = 1.54e-05
+Epoch 150: Train Loss = 7.04e-06, Val Loss = 7.51e-06
+Epoch 200: Train Loss = 4.75e-06, Val Loss = 4.72e-06
+Epoch 250: Train Loss = 4.41e-06, Val Loss = 4.39e-06
+Evaluating on test set...
+
+Results for PhysicsGuided_ResidualCorrection_v1:
+  Parameters: 225
+  Mean Abs Error: 8.71e-04
+  Mean Rel Error: 3.30e+07
+  Physics Error: 2.78e-06
+  Correlation: 0.999992
+  Inference Time: 0.0004s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_ResidualCorrection_v1.pth
+
+============================================================
+Testing PhysicsGuided_AdaptiveCorrection_v1
+============================================================
+Parameters: 102
+Estimated FLOPs: 111
+Training model with 102 parameters...
+Using Log-Cosh loss...
+Epoch   0: Train Loss = 8.90e-01, Val Loss = 1.61e-01
+Epoch  50: Train Loss = 3.17e-04, Val Loss = 3.14e-04
+Epoch 100: Train Loss = 6.14e-06, Val Loss = 5.55e-06
+Epoch 150: Train Loss = 3.66e-06, Val Loss = 3.62e-06
+Epoch 200: Train Loss = 3.55e-06, Val Loss = 3.55e-06
+Epoch 250: Train Loss = 3.54e-06, Val Loss = 3.54e-06
+Evaluating on test set...
+
+Results for PhysicsGuided_AdaptiveCorrection_v1:
+  Parameters: 102
+  Mean Abs Error: 8.44e-04
+  Mean Rel Error: 7.47e+06
+  Physics Error: 2.26e-06
+  Correlation: 0.999993
+  Inference Time: 0.0006s
+Model saved to ./pinn_guided_results/model_PhysicsGuided_AdaptiveCorrection_v1.pth
+
+Results saved to ./pinn_guided_results/physics_guided_results.json
+Creating comparison plots...
+
+Physics-Guided PINN Comparison complete!
+Results saved in: ./pinn_guided_results
+
+====================================================================================================
+DETAILED PHYSICS-GUIDED PINN COMPARISON
+====================================================================================================
+Model                               Params   Abs Err      Rel Err      Physics Err  Correlation  Time (s)
+----------------------------------------------------------------------------------------------------
+PhysicsGuided_SmallCorrection_v1    61       3.60e-04     1.80e+06     5.35e-07     0.999998     0.0005  
+PhysicsGuided_DeepTinyPINN_v2       209      7.02e-04     3.85e+07     3.29e-06     0.999990     0.0009  
+PhysicsGuided_AdaptiveCorrection_v1 102      8.44e-04     7.47e+06     2.26e-06     0.999993     0.0006  
+PhysicsGuided_ResidualCorrection_v1 225      8.71e-04     3.30e+07     2.78e-06     0.999992     0.0004  
+PhysicsGuided_DeepTinyPINN_v1       73       9.84e-04     2.74e+07     2.91e-06     0.999991     0.0009  
+PhysicsGuided_TinyPINN_v2           61       1.15e-03     2.95e+07     4.26e-06     0.999987     0.0008  
+PhysicsGuided_TinyPINN_v3           121      1.45e-03     1.30e+07     6.27e-06     0.999980     0.0010  
+PhysicsGuided_TinyPINN_v1           31       1.58e-03     3.37e+07     7.90e-06     0.999977     0.0008  
+PhysicsGuided_LargeCorrection_v1    61       1.93e-03     2.80e+07     1.06e-05     0.999966     0.0004  
+PhysicsGuided_ImprovedGuess_v1      61       2.99e-03     8.53e+07     2.77e-05     0.999916     0.0005  
+====================================================================================================
+
+BEST PERFORMERS:
+Best Absolute Error: PhysicsGuided_SmallCorrection_v1 (3.60e-04)
+Best Physics Error: PhysicsGuided_SmallCorrection_v1 (5.35e-07)
+Best Correlation: PhysicsGuided_SmallCorrection_v1 (0.999998)
+Fastest Inference: PhysicsGuided_ResidualCorrection_v1 (0.0004s)
+PINN comparison completed successfully at Thu Jul 17 06:34:37 PM CEST 2025

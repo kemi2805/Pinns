@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --time 08:00:00
 #SBATCH --job-name pinn-comparison
-#SBATCH --partition gpu_test
+#SBATCH --partition gpu
 #SBATCH --gres gpu:1
 #SBATCH --mem=64GB
-#SBATCH --output pinn-comparison-%j.out
-#SBATCH --error pinn-comparison-%j.err
+#SBATCH --output pinn-comparison.out
+#SBATCH --error pinn-comparison.err
 
 # Print job info for debugging
 echo "Job started at: $(date)"
@@ -15,7 +15,7 @@ echo "Working directory: $(pwd)"
 
 # Load your environment with error checking
 echo "Activating Python environment..."
-source /scratch/astro/miler/python-env/pytorch/bin/activate
+source /mnt/rafast/miler/python-env/pytorch/bin/activate
 if [ $? -ne 0 ]; then
     echo "ERROR: Failed to activate Python environment"
     exit 1
@@ -26,7 +26,7 @@ echo "Python path: $(which python)"
 
 # Change to your working directory
 echo "Changing to working directory..."
-cd /home/astro/miler/codes/Pinns
+cd /mnt/rafast/miler/codes/Pinns
 if [ $? -ne 0 ]; then
     echo "ERROR: Failed to change to /home/astro/miler/codes/Pinns"
     exit 1
@@ -38,12 +38,12 @@ ls -la test_many_pinn.py
 
 # Run the PINN comparison script with verbose output
 echo "Starting PINN comparison at: $(date)"
-python -u test_many_pinn.py \
-    --n_train 200 \
-    --n_val 100 \
-    --n_test 100 \
-    --epochs 200 \
-    --output_dir ./pinn_results_sbatch
+python -u test_many_guided_pinn.py \
+    --n_train 400 \
+    --n_val 200 \
+    --n_test 200 \
+    --epochs 300 \
+    --output_dir ./pinn_guided_results
 
 # Check exit status
 if [ $? -eq 0 ]; then
