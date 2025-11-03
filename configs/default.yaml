@@ -1,0 +1,65 @@
+# Default configuration for PINN training
+
+# Physics parameters
+physics:
+  eos:
+    K: 100
+    gamma: 2
+    gamma_thermal: 1.0
+
+# Data generation parameters
+data:
+  n_train: 1000
+  n_val: 200
+  n_test: 1000
+  lrho_min: -8
+  lrho_max: -2.7
+  W_min: 1.0
+  W_max: 1.5
+  bias_strength: 1
+
+# Model parameters
+model:
+  type: "PhysicsGuided_TinyPINNvKen"
+  correction_scale: 0.2
+  dtype: "float64"
+
+# Training parameters
+training:
+  num_epochs: 5 #200
+  batch_size: 1024 #256
+  learning_rate: 0.01 #0.005
+  weight_decay: 1.0e-5
+  physics_weight: 0.1
+  loss_type: "mae"  # Options: "mse", "mae", "log_cosh"
+  use_amp: false  # Automatic Mixed Precision
+  gradient_clip: 1.0
+  scheduler_patience: 10
+  early_stopping_patience: 40
+
+# Optimizer settings
+optimizer:
+  type: "AdamW"
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+
+# Output settings
+output:
+  checkpoint_dir: "experiments/checkpoints"
+  log_dir: "experiments/logs"
+  figure_dir: "experiments/figures"
+  generate_plots: true
+  save_frequency: 10  # Save checkpoint every N epochs
+  
+# Hardware settings
+hardware:
+  num_workers: 0
+  pin_memory: true
+  #persistent_workers: true
+
+# Logging settings
+logging:
+  use_tensorboard: true
+  use_wandb: false
+  log_frequency: 10  # Log metrics every N batches
+  verbose: true

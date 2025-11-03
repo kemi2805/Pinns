@@ -1,0 +1,12 @@
+{
+    "python.defaultInterpreterPath": "/lustre/hpe/ws12/ws12.a/ws/xfpmiler-python/torch/bin/python",
+    "python.terminal.activateEnvironment": false,
+
+    "python.analysis.extraPaths": [
+        "/lustre/hpe/ws12/ws12.a/ws/xfpmiler-python/torch/lib/python3.11/site-packages",
+        "/opt/hlrs/testing/ai-frameworks/pytorch/2.6.0_cray-python-3.11.7_rocm-6.2.2/lib/python3.11/site-packages"
+    ],
+    "python.analysis.indexing": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "python.languageServer": "Pylance"
+}
