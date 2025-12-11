@@ -72,6 +72,9 @@ def export_physics_guided_model_to_hdf5(model, dataset, filename, activation_nam
     print(f"  Normalization ranges:")
     print(f"    C: [{dataset.C_min.cpu().numpy().flatten()}] to [{dataset.C_max.cpu().numpy().flatten()}]")
     print(f"    Z: [{dataset.Z_min.cpu().numpy().flatten()}] to [{dataset.Z_max.cpu().numpy().flatten()}]")
+    print(f"\nWeight Matrix Shapes:")
+    print(f"  weights_ih shape: {weights_ih.shape}")  # Should be (64, 3)
+    print(f"  weights_ho shape: {weights_ho.shape}")  # Should be (1, 64)
     print(f"{'='*60}\n")
 
 
